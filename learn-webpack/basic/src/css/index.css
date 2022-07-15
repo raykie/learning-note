@@ -1,0 +1,27 @@
+@font-face {
+  font-family: "iconfont";
+  src: url("../fonts/Byom-Icons-Trial.ttf") format("ttf"),
+    url("../fonts/Byom-Bold-Trial.ttf") format("ttf"),
+    url("../fonts/Byom-Light-Trial.ttf") format("ttf");
+}
+
+.box {
+  display: flex;
+  width: 100px;
+  height: 100px;
+  background-color: aqua;
+}
+
+.img-box {
+  width: 100px;
+  height: 100px;
+  background-image: url(../../public/img/webpackIcon.png);
+  background-size: cover;
+}
+
+.big-img {
+  width: 400px;
+  height: 600px;
+  background-image: url(../../public/img/bus.jpg);
+  background-size: cover;
+}
