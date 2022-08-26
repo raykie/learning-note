@@ -2,4 +2,5 @@
 function greet(person, date) {
     console.log("Hello ".concat(person, ", today is ").concat(date, "!"));
 }
-greet("Brendan");
+var hello = "hello";
+greet("Maddison", new Date());
