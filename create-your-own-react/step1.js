@@ -1,3 +1,12 @@
-import Rayact from './Rayact.js'
+import Rayact from "./Rayact.js";
 
-console.log(Rayact.description)
+console.log(Rayact.description);
+
+const element = Rayact.createElement(
+  "div",
+  { id: "foo" },
+  Rayact.createElement("a", null, "bar"),
+  Rayact.createElement("b")
+);
+
+console.log(element)
