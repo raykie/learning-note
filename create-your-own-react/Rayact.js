@@ -19,6 +19,18 @@ const Rayact = {
       },
     };
   },
+  render(element, container) {
+    const dom =
+      element.type === "TEXT_ELEMENT"
+        ? document.createTextNode(element.props.nodeValue)
+        : document.createElement(element.type);
+    const isValid = (key) => key !== "children";
+    Object.keys(element.props)
+      .filter(isValid)
+      .forEach((key) => (dom[key] = element.props[key]));
+    container.appendChild(dom);
+    element.props.children.forEach((child) => this.render(child, dom));
+  },
 };
 
 export default Rayact;

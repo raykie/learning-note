@@ -9,4 +9,7 @@ const element = Rayact.createElement(
   Rayact.createElement("b")
 );
 
-console.log(element)
+console.log(element);
+
+const root = document.getElementById("root");
+Rayact.render(element, root);
