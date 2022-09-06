@@ -1,3 +1,5 @@
+let nextUnitOfWork = null;
+
 const createTextElement = (value) => ({
   type: "TEXT_ELEMENT",
   props: {
@@ -19,7 +21,7 @@ const Rayact = {
       },
     };
   },
-  render(element, container) {
+  createDom(fiber) {
     const dom =
       element.type === "TEXT_ELEMENT"
         ? document.createTextNode(element.props.nodeValue)
@@ -28,8 +30,15 @@ const Rayact = {
     Object.keys(element.props)
       .filter(isValid)
       .forEach((key) => (dom[key] = element.props[key]));
-    container.appendChild(dom);
-    element.props.children.forEach((child) => this.render(child, dom));
+    return dom;
+  },
+  render(element, container) {
+    nextUnitOfWork = {
+      dom: container,
+      props: {
+        children: [element],
+      },
+    };
   },
 };
 
