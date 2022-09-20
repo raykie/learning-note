@@ -2,6 +2,8 @@ let nextUnitOfWork = null;
 let wipRoot = null;
 let currentRoot = null;
 let deletions = null;
+let wipFunctionComponentFiber = null;
+let hookIndex = null;
 
 function createTextElement(value) {
   return {
@@ -71,21 +73,34 @@ function commitRoot() {
   wipRoot = null;
 }
 
+function commitDeletion(fiber, domParent) {
+  if (fiber.dom) {
+    domParent.removeChild(fiber.dom);
+  } else {
+    commitDeletion(fiber.child, domParent);
+  }
+}
 function commitWork(fiber) {
   if (!fiber) {
     return;
   }
 
+  let domParentFiber = fiber.parent;
+  while (!domParentFiber.dom) {
+    domParentFiber = domParentFiber.parent;
+  }
   const domParent = fiber.parent.dom;
+
   if (fiber.effectTag === "PLACEMENT" && fiber.dom != null) {
     domParent.appendChild(fiber.dom);
   } else if (fiber.effectTag === "UPDATE" && fiber.dom != null) {
     updateDom(fiber.dom, fiber.alternate.props, fiber.props);
   } else if (fiber.effectTag === "DELETION") {
-    domParent.removeChild(fiber, dom);
+    commitDeletion(fiber, domParent);
+    return;
   }
-  domParent.appendChild(fiber, dom);
-  commitWork(fiber, child);
+
+  commitWork(fiber.child);
   commitWork(fiber.sibling);
 }
 
@@ -101,15 +116,31 @@ function workLoop(deadline) {
   requestIdleCallback(workLoop);
 }
 
-function performUnitOfWork(fiber) {
+function updateHostComponent(fiber) {
   // Create dom node
   if (!fiber.dom) {
     fiber.dom = createDom(fiber);
   }
-
   // Create new fibers
-  const elements = fiber.props.children;
-  reconcileChildren(fiber, elements);
+  reconcileChildren(fiber, fiber.props.children);
+}
+
+function updateFunctionComponent(fiber) {
+  wipFunctionComponentFiber = fiber;
+  hookIndex = 0;
+  wipFunctionComponentFiber.hooks = [];
+  const children = [fiber.type(fiber.props)];
+  reconcileChildren(fiber, children);
+}
+
+function performUnitOfWork(fiber) {
+  // judge type
+  const isFunctionComponent = fiber.type instanceof Function;
+  if (isFunctionComponent) {
+    updateFunctionComponent(fiber);
+  } else {
+    updateHostComponent(fiber);
+  }
 
   // Return next unit of work
   if (fiber.child) {
@@ -173,6 +204,7 @@ function reconcileChildren(wipFiber, elements) {
       prevSibling.sibling = newFiber;
     }
 
+    prevSibling = newFiber;
     index += 1;
   }
 }
@@ -200,6 +232,34 @@ const Rayact = {
     };
     nextUnitOfWork = wipRoot;
     deletions = [];
+  },
+  useState(initial) {
+    const oldHook =
+      wipFunctionComponentFiber.alternate &&
+      wipFunctionComponentFiber.alternate.hooks &&
+      wipFunctionComponentFiber.alternate.hooks[hookIndex];
+    const hook = {
+      state: oldHook ? oldHook.state : initial,
+      queue: [],
+    };
+    const actions = oldHook ? oldHook.queue : []
+    actions.forEach(action => {
+      hook.state = action(hook.state)
+    })
+    const setState = (action) => {
+      hook.queue.push(action);
+      wipRoot = {
+        dom: currentRoot.dom,
+        props: currentRoot.props,
+        alternate: currentRoot,
+      };
+      nextUnitOfWork = wipRoot;
+      deletions = [];
+    };
+
+    wipFunctionComponentFiber.hooks.push(hook);
+    hookIndex++;
+    return [hook.state, setState];
   },
 };
 
