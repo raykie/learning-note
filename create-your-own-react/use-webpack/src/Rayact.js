@@ -5,6 +5,11 @@ let deletions = null;
 let wipFunctionComponentFiber = null;
 let hookIndex = null;
 
+const isEvent = (key) => key.startsWith("on");
+const isProperty = (key) => key !== "children" && !isEvent(key);
+const isNew = (prev, next) => (key) => prev[key] !== next[key];
+const isGone = (prev, next) => (key) => !(key in next);
+
 function createTextElement(value) {
   return {
     type: "TEXT_ELEMENT",
@@ -20,18 +25,19 @@ function createDom(fiber) {
     fiber.type === "TEXT_ELEMENT"
       ? document.createTextNode(fiber.props.nodeValue)
       : document.createElement(fiber.type);
-  const isValid = (key) => key !== "children";
-  debugger;
   Object.keys(fiber.props)
-    .filter(isValid)
+    .filter(isProperty)
     .forEach((key) => (dom[key] = fiber.props[key]));
+  Object.keys(fiber.props)
+    .filter(isEvent)
+    .forEach((eventName) => {
+      const eventType = eventName.toLowerCase().substring(2);
+      dom.addEventListener(eventType, fiber.props[eventName]);
+    });
+  console.log();
   return dom;
 }
 
-const isEvent = (key) => key.startsWith("on");
-const isProperty = (key) => key !== "children" && !isEvent(key);
-const isNew = (prev, next) => (key) => prev[key] !== next[key];
-const isGone = (prev, next) => (key) => !(key in next);
 function updateDom(dom, prevProps, nextProps) {
   // Remove old or changed event listeners
   Object.keys(prevProps)
@@ -90,7 +96,7 @@ function commitWork(fiber) {
   while (!domParentFiber.dom) {
     domParentFiber = domParentFiber.parent;
   }
-  const domParent = fiber.parent.dom;
+  const domParent = domParentFiber.dom;
 
   if (fiber.effectTag === "PLACEMENT" && fiber.dom != null) {
     domParent.appendChild(fiber.dom);
@@ -131,7 +137,7 @@ function updateFunctionComponent(fiber) {
   hookIndex = 0;
   wipFunctionComponentFiber.hooks = [];
   const children = [fiber.type(fiber.props)];
-  debugger;
+
   reconcileChildren(fiber, children);
 }
 
@@ -163,10 +169,7 @@ function reconcileChildren(wipFiber, elements) {
   let oldFiber = wipFiber.alternate && wipFiber.alternate.child;
 
   while (index < elements.length || oldFiber != null) {
-    const element =
-      typeof elements[index] === "string"
-        ? createTextElement(elements[index])
-        : elements[index];
+    const element = elements[index];
     let newFiber = null;
 
     // TODO compare oldFiber to element
@@ -216,6 +219,7 @@ function reconcileChildren(wipFiber, elements) {
 
 const Rayact = {
   description: "self made react by raykie.",
+  renderTimes: 0,
   createElement(type, props, ...children) {
     return {
       type,
@@ -237,6 +241,8 @@ const Rayact = {
     };
     nextUnitOfWork = wipRoot;
     deletions = [];
+    console.log(`Rayact.render is triggered the ${++this.renderTimes}th time.`);
+    console.log("wipRoot: ", wipRoot);
   },
   useState(initial) {
     const oldHook =
@@ -252,6 +258,7 @@ const Rayact = {
       hook.state = action(hook.state);
     });
     const setState = (action) => {
+      console.log("setState is triggered");
       hook.queue.push(action);
       wipRoot = {
         dom: currentRoot.dom,
